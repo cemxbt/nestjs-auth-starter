@@ -1,0 +1,44 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+}
+
+/// A refresh session. Every refresh rotates the session: the old row is revoked
+/// and points to its replacement. All rotations of one login share a familyId,
+/// so presenting an already-rotated token revokes the whole family.
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId     String
+  tokenHash    String
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
